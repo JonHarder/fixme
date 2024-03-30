@@ -66,12 +66,12 @@ fn main() -> std::io::Result<()> {
                     Err(err)
                 }
                 Ok(conf) => {
-                    let fixmes = conf.list_fixmes(ListScope::from(scope))?;
-                    for (project_location, fix) in fixmes {
+                    for (name, fix) in conf.list_fixmes(ListScope::from(scope))? {
                         println!(
-                            "{date}: {location} {message}",
+                            "[{date}] {location}: /{folder:<20} {message}",
                             date = fix.created.naive_local(),
-                            location = project_location.join(&fix.location).to_str().unwrap(),
+                            location = name,
+                            folder = fix.location.to_str().unwrap(),
                             message = fix.message,
                         );
                     }

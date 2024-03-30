@@ -17,6 +17,13 @@ pub struct Project {
     pub fixmes: Vec<Fixme>,
 }
 
+impl Project {
+    pub fn name(&self) -> &str {
+        let pname = self.location.file_name().unwrap();
+        pname.to_str().unwrap()
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Fixme {
     pub message: String,
@@ -53,24 +60,24 @@ impl Config {
         }
     }
 
-    pub fn list_fixmes(&self, scope: ListScope) -> std::io::Result<Vec<(&PathBuf, &Fixme)>> {
+    pub fn list_fixmes(&self, scope: ListScope) -> std::io::Result<Vec<(&str, &Fixme)>> {
         let cur_dir = std::env::current_dir()?;
         let cur_dir = std::fs::canonicalize(cur_dir)?;
-        let mut fixmes: Vec<(&PathBuf, &Fixme)> = vec![];
+        let mut fixmes: Vec<(&str, &Fixme)> = vec![];
         for project in &self.projects {
             if scope == ListScope::All {
                 for fixme in &project.fixmes {
-                    fixmes.push((&project.location, fixme));
+                    fixmes.push((&project.name(), fixme));
                 }
             } else if scope == ListScope::Project && cur_dir.starts_with(&project.location) {
                 for fixme in &project.fixmes {
-                    fixmes.push((&project.location, fixme));
+                    fixmes.push((&project.name(), fixme));
                 }
             } else if scope == ListScope::Directory && cur_dir.starts_with(&project.location) {
                 for fixme in &project.fixmes {
                     let fixme_path = project.location.join(&fixme.location);
                     if cur_dir == fixme_path {
-                        fixmes.push((&project.location, fixme));
+                        fixmes.push((&project.name(), fixme));
                     }
                 }
             }
