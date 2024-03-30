@@ -1,5 +1,3 @@
-use std::ops::DerefMut;
-
 use clap::{Args, Parser, Subcommand};
 use config::ListScope;
 
