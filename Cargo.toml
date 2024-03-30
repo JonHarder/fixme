@@ -1,0 +1,15 @@
+[package]
+name = "fixme"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jon Harder <jonharder6@gmail.com>"]
+description = "Keep track of fixme tasks local to your code without adding them to version control."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = { version = "0.4.37", features = ["serde"] }
+clap = { version = "4.5.4", features = ["derive"] }
+serde = { version = "1.0.197", features = ["derive"] }
+toml = "0.8.12"
+xdg = "2.5.2"
