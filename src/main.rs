@@ -42,6 +42,18 @@ struct Scope {
     all: bool,
 }
 
+impl From<Scope> for config::ListScope {
+    fn from(value: Scope) -> Self {
+        let Scope { project, all } = value;
+        match (project, all) {
+            (true, false) => ListScope::Project,
+            (false, true) => ListScope::All,
+            (false, false) => ListScope::Directory,
+            _ => ListScope::Directory,
+        }
+    }
+}
+
 fn main() -> std::io::Result<()> {
     let cli = Cli::parse();
     match cli.command {
@@ -54,14 +66,7 @@ fn main() -> std::io::Result<()> {
                     Err(err)
                 }
                 Ok(conf) => {
-                    let list_scope = if scope.project {
-                        ListScope::Project
-                    } else if scope.all {
-                        ListScope::All
-                    } else {
-                        ListScope::Directory
-                    };
-                    let fixmes = conf.list_fixmes(list_scope)?;
+                    let fixmes = conf.list_fixmes(ListScope::from(scope))?;
                     for (project_location, fix) in fixmes {
                         println!(
                             "{date}: {location} {message}",
