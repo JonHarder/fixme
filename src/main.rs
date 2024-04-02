@@ -58,7 +58,8 @@ fn main() -> std::io::Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Command::Add { message } => {
-            let fixme = config::add(&message)?;
+            let mut conf = config::Config::load()?;
+            let fixme = config::add(&mut conf, &message)?;
             println!("{}", fixme);
             Ok(())
         }
