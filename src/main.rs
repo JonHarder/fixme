@@ -17,6 +17,8 @@ enum Command {
         /// The message associated with this fixme
         message: String,
     },
+    /// Fix (complete) a fixme.
+    Fix { project_id: u8, fixme_id: u8 },
     /// Show the fixmes local to your directory, project or all recorded.
     List {
         /// Filter fixmes
@@ -57,6 +59,10 @@ impl From<Scope> for config::ListScope {
 fn main() -> std::io::Result<()> {
     let cli = Cli::parse();
     match cli.command {
+        Command::Fix {
+            project_id: _,
+            fixme_id: _,
+        } => Ok(()),
         Command::Add { message } => {
             let mut conf = config::Config::load()?;
             let fixme = config::add(&mut conf, &message)?;
