@@ -57,7 +57,11 @@ impl From<Scope> for config::ListScope {
 fn main() -> std::io::Result<()> {
     let cli = Cli::parse();
     match cli.command {
-        Command::Add { message: _ } => todo!(),
+        Command::Add { message } => {
+            let fixme = config::add(&message)?;
+            println!("{}", fixme);
+            Ok(())
+        }
         Command::List { filter: _, scope } => {
             let c = config::Config::load();
             match c {

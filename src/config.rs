@@ -1,10 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::{
-    fmt,
-    fs::{self, File},
-    path::PathBuf,
-};
+use std::{fmt, fs, path::PathBuf};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
@@ -24,7 +20,7 @@ impl Project {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Fixme {
     pub message: String,
     pub location: PathBuf,
@@ -51,6 +47,10 @@ impl fmt::Display for Fixme {
 }
 
 impl Config {
+    pub fn new() -> Self {
+        Config { projects: vec![] }
+    }
+
     pub fn load() -> std::io::Result<Self> {
         let file_path = get_config_path()?;
         let contents = fs::read_to_string(file_path)?;
@@ -60,16 +60,21 @@ impl Config {
         }
     }
 
+    pub fn save(&self) -> std::io::Result<()> {
+        let path = get_config_path()?;
+        let contents = toml::to_string(&self).expect("Config object to serialize to toml");
+        println!("Saving config...");
+        std::fs::write(path, contents)
+    }
+
     pub fn list_fixmes(&self, scope: ListScope) -> std::io::Result<Vec<(&str, &Fixme)>> {
         let cur_dir = std::env::current_dir()?;
         let cur_dir = std::fs::canonicalize(cur_dir)?;
         let mut fixmes: Vec<(&str, &Fixme)> = vec![];
         for project in &self.projects {
-            if scope == ListScope::All {
-                for fixme in &project.fixmes {
-                    fixmes.push((&project.name(), fixme));
-                }
-            } else if scope == ListScope::Project && cur_dir.starts_with(&project.location) {
+            if (scope == ListScope::All)
+                || (scope == ListScope::Project && cur_dir.starts_with(&project.location))
+            {
                 for fixme in &project.fixmes {
                     fixmes.push((&project.name(), fixme));
                 }
@@ -91,10 +96,9 @@ impl Config {
 fn app_name() -> String {
     let app_name = std::env::current_exe().expect("application to have a name");
     let s = app_name.file_name().expect("file path to have a base name");
-    String::from(
-        s.to_str()
-            .expect("os string to have a String representation"),
-    )
+    s.to_str()
+        .expect("os string to have a String representation")
+        .to_string()
 }
 
 fn get_config_path() -> std::io::Result<PathBuf> {
@@ -104,24 +108,86 @@ fn get_config_path() -> std::io::Result<PathBuf> {
 
 fn create_config_file() -> std::io::Result<()> {
     let xdg_dirs = xdg::BaseDirectories::with_prefix(app_name())?;
+    // This places the necessary parent directories to the config file itself
     let result_path = xdg_dirs.place_config_file("config.toml");
-    if let Err(err) = &result_path {
-        if err.kind() == std::io::ErrorKind::AlreadyExists {
-            println!("Configuration file already exists.");
-            return Ok(());
+    // handle the error this could return in order to catch the AlreadyExists Error.
+    // bubble up any other error
+    let path = match result_path {
+        Ok(p) => Ok(p),
+        Err(err) => {
+            if err.kind() == std::io::ErrorKind::AlreadyExists {
+                Ok(get_config_path()?)
+            } else {
+                Err(err)
+            }
         }
-    }
-    let result_path = result_path?;
-    if !result_path.exists() {
-        println!("Creating config file: {:?}", result_path);
-        File::create(result_path).map(|_| ())
-    } else {
+    }?;
+    if path.exists() {
         println!("File already exists");
+        Ok(())
+    } else {
+        Config::new().save()?;
+        println!("Created empty configuration");
         Ok(())
     }
 }
 
+/// Creates a project in the configuration file with location set to current directory.
+fn initialize_project(conf: &mut Config) -> std::io::Result<()> {
+    let current_dir = std::env::current_dir()?;
+    let current_dir = std::fs::canonicalize(current_dir)?;
+    if conf
+        .projects
+        .iter()
+        .filter(|p| p.location == current_dir)
+        .count()
+        == 0
+    {
+        println!("No projects found for: {:?}.", current_dir);
+        conf.projects.push(Project {
+            location: current_dir.clone(),
+            fixmes: vec![],
+        });
+        conf.save()?;
+        println!(
+            "Updated configuration with new project for: {:?}",
+            current_dir
+        );
+        return Ok(());
+    } else {
+        println!("Project for this directory already exists.");
+    }
+    Ok(())
+}
+
 pub fn init() -> std::io::Result<()> {
     println!("Initializing configuration...");
-    create_config_file()
+    create_config_file()?;
+    let mut config = Config::load()?;
+    initialize_project(&mut config)
+}
+
+pub fn add(message: &str) -> std::io::Result<Fixme> {
+    let dir = std::env::current_dir()?;
+    let dir = std::fs::canonicalize(dir)?;
+    let fixme = Fixme {
+        message: message.to_string(),
+        location: dir,
+        created: Utc::now(),
+    };
+    let mut conf = Config::load()?;
+    // TODO: how to determine which project to add this fixme to?
+    for project in &mut conf.projects {
+        for path in fixme.location.ancestors() {
+            if path == project.location {
+                project.fixmes.push(fixme.clone());
+                conf.save()?;
+                return Ok(fixme);
+            }
+        }
+    }
+    Err(std::io::Error::new(
+        std::io::ErrorKind::InvalidData,
+        "No project initialized for this directory. run 'fixme init' first",
+    ))
 }
