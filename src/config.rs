@@ -167,7 +167,7 @@ pub fn init() -> std::io::Result<()> {
     initialize_project(&mut config)
 }
 
-pub fn add(message: &str) -> std::io::Result<Fixme> {
+pub fn add(conf: &mut Config, message: &str) -> std::io::Result<Fixme> {
     let dir = std::env::current_dir()?;
     let dir = std::fs::canonicalize(dir)?;
     let fixme = Fixme {
@@ -175,8 +175,6 @@ pub fn add(message: &str) -> std::io::Result<Fixme> {
         location: dir,
         created: Utc::now(),
     };
-    let mut conf = Config::load()?;
-    // TODO: how to determine which project to add this fixme to?
     for project in &mut conf.projects {
         for path in fixme.location.ancestors() {
             if path == project.location {
@@ -190,4 +188,28 @@ pub fn add(message: &str) -> std::io::Result<Fixme> {
         std::io::ErrorKind::InvalidData,
         "No project initialized for this directory. run 'fixme init' first",
     ))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn add_fixme_when_no_matching_project_is_err() {
+        let mut conf = Config::new();
+        assert!(add(&mut conf, "foobar").is_err());
+    }
+
+    #[test]
+    fn add_fixme_when_fixme_in_project_location_is_ok() -> std::io::Result<()> {
+        let mut conf = Config::new();
+        let dir = std::env::current_dir()?;
+        conf.projects.push(Project {
+            location: dir.into(),
+            fixmes: vec![],
+        });
+        let result = add(&mut conf, "");
+        assert!(result.is_ok());
+        Ok(())
+    }
 }
