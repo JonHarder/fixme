@@ -190,6 +190,16 @@ pub fn add(conf: &mut Config, message: &str) -> std::io::Result<Fixme> {
     ))
 }
 
+#[derive(Debug)]
+pub struct FixId {
+    pub project_id: u8,
+    pub fixme_id: u8,
+}
+
+pub fn fix(_conf: &mut Config, id: FixId) {
+    println!("Fixing id: {id:?}");
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -205,7 +215,7 @@ mod test {
         let mut conf = Config::new();
         let dir = std::env::current_dir()?;
         conf.projects.push(Project {
-            location: dir.into(),
+            location: dir,
             fixmes: vec![],
         });
         let result = add(&mut conf, "");

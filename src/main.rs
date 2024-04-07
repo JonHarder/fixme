@@ -60,9 +60,17 @@ fn main() -> std::io::Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Command::Fix {
-            project_id: _,
-            fixme_id: _,
-        } => Ok(()),
+            project_id,
+            fixme_id,
+        } => {
+            let fix_id = config::FixId {
+                project_id,
+                fixme_id,
+            };
+            let mut c = config::Config::load()?;
+            config::fix(&mut c, fix_id);
+            Ok(())
+        }
         Command::Add { message } => {
             let mut conf = config::Config::load()?;
             let fixme = config::add(&mut conf, &message)?;
