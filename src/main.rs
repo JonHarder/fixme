@@ -1,6 +1,9 @@
 use clap::{Args, Parser, Subcommand};
 use config::ListScope;
 
+use crate::config::Fixme;
+
+mod commands;
 mod config;
 
 #[derive(Parser, Debug)]
@@ -63,18 +66,20 @@ fn main() -> std::io::Result<()> {
             project_id,
             fixme_id,
         } => {
-            let fix_id = config::FixId {
+            let fix_id = commands::fix::FixId {
                 project_id,
                 fixme_id,
             };
             let mut c = config::Config::load()?;
-            config::fix(&mut c, fix_id);
+            commands::fix::fix(&mut c, fix_id);
             Ok(())
         }
         Command::Add { message } => {
             let mut conf = config::Config::load()?;
-            let fixme = config::add(&mut conf, &message)?;
+            let fixme = Fixme::new_in_current_dir(&message)?;
+            let fixme = commands::add::add(&mut conf, fixme)?;
             println!("{}", fixme);
+            conf.save()?;
             Ok(())
         }
         Command::List { filter: _, scope } => {
@@ -85,12 +90,14 @@ fn main() -> std::io::Result<()> {
                     Err(err)
                 }
                 Ok(conf) => {
-                    for (name, fix) in conf.list_fixmes(ListScope::from(scope))? {
+                    for (project, fix) in conf.list_fixmes(ListScope::from(scope))? {
                         println!(
-                            "[{date}] {location}: /{folder:<20} {message}",
+                            "[{date}] {location}: (/{folder}) {message}",
                             date = fix.created.naive_local(),
-                            location = name,
-                            folder = fix.location.to_str().unwrap(),
+                            location = project.name(),
+                            folder = config::remove_ancestors(project.location(), &fix.location)
+                                .to_str()
+                                .unwrap(),
                             message = fix.message,
                         );
                     }
