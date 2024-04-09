@@ -1,6 +1,9 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::{fmt, fs, path::PathBuf};
+use std::{
+    fmt, fs,
+    path::{Path, PathBuf},
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
@@ -9,15 +12,8 @@ pub struct Config {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Project {
-    pub location: PathBuf,
-    pub fixmes: Vec<Fixme>,
-}
-
-impl Project {
-    pub fn name(&self) -> &str {
-        let pname = self.location.file_name().unwrap();
-        pname.to_str().unwrap()
-    }
+    location: PathBuf,
+    fixmes: Vec<Fixme>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -25,6 +21,76 @@ pub struct Fixme {
     pub message: String,
     pub location: PathBuf,
     pub created: DateTime<Utc>,
+}
+
+/// Given a parent path and some path, return the fragment of the path after it.
+pub fn remove_ancestors(parent: &Path, path: &Path) -> PathBuf {
+    let mut p = PathBuf::new();
+    let mut parts = vec![];
+    for ancestor in path.ancestors() {
+        // println!("ancestor: {:?}, parent: {:?}", &ancestor, &parent);
+        if ancestor == parent {
+            break;
+        } else {
+            // println!("{:?}, {:?}", &ancestor, &ancestor.file_name());
+            if let Some(name) = ancestor.file_name() {
+                parts.push(name);
+            }
+        }
+    }
+    parts.reverse();
+    for part in &parts {
+        p.push(part);
+    }
+    p
+}
+
+impl Project {
+    pub fn new(location: PathBuf) -> Self {
+        Project {
+            location,
+            fixmes: vec![],
+        }
+    }
+
+    pub fn is_path_in_project(&self, path: &Path) -> bool {
+        for ancestor in path.ancestors() {
+            if ancestor == self.location() {
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn location(&self) -> &Path {
+        &self.location
+    }
+
+    pub fn name(&self) -> &str {
+        let pname = self.location.file_name().unwrap();
+        pname.to_str().unwrap()
+    }
+
+    pub fn add_fixme(&mut self, fixme: Fixme) -> &Fixme {
+        self.fixmes.push(fixme);
+        self.fixmes.last().unwrap()
+    }
+}
+
+impl Fixme {
+    pub fn new_in_current_dir(message: &str) -> std::io::Result<Self> {
+        let current_dir = std::env::current_dir()?;
+        let current_dir = std::fs::canonicalize(current_dir)?;
+        Ok(Fixme::new(current_dir, message))
+    }
+
+    pub fn new(location: PathBuf, message: &str) -> Self {
+        Fixme {
+            message: message.to_string(),
+            location,
+            created: Utc::now(),
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -67,22 +133,21 @@ impl Config {
         std::fs::write(path, contents)
     }
 
-    pub fn list_fixmes(&self, scope: ListScope) -> std::io::Result<Vec<(&str, &Fixme)>> {
+    pub fn list_fixmes(&self, scope: ListScope) -> std::io::Result<Vec<(&Project, &Fixme)>> {
         let cur_dir = std::env::current_dir()?;
         let cur_dir = std::fs::canonicalize(cur_dir)?;
-        let mut fixmes: Vec<(&str, &Fixme)> = vec![];
+        let mut fixmes: Vec<(&Project, &Fixme)> = vec![];
         for project in &self.projects {
             if (scope == ListScope::All)
-                || (scope == ListScope::Project && cur_dir.starts_with(&project.location))
+                || (scope == ListScope::Project && project.is_path_in_project(&cur_dir))
             {
                 for fixme in &project.fixmes {
-                    fixmes.push((&project.name(), fixme));
+                    fixmes.push((&project, fixme));
                 }
-            } else if scope == ListScope::Directory && cur_dir.starts_with(&project.location) {
+            } else if scope == ListScope::Directory && project.is_path_in_project(&cur_dir) {
                 for fixme in &project.fixmes {
-                    let fixme_path = project.location.join(&fixme.location);
-                    if cur_dir == fixme_path {
-                        fixmes.push((&project.name(), fixme));
+                    if fixme.location == cur_dir {
+                        fixmes.push((&project, fixme));
                     }
                 }
             }
@@ -93,6 +158,11 @@ impl Config {
     }
 }
 
+fn get_config_path() -> std::io::Result<PathBuf> {
+    let xdg_dirs = xdg::BaseDirectories::with_prefix(app_name())?;
+    Ok(xdg_dirs.get_config_file("config.toml"))
+}
+
 fn app_name() -> String {
     let app_name = std::env::current_exe().expect("application to have a name");
     let s = app_name.file_name().expect("file path to have a base name");
@@ -101,9 +171,11 @@ fn app_name() -> String {
         .to_string()
 }
 
-fn get_config_path() -> std::io::Result<PathBuf> {
-    let xdg_dirs = xdg::BaseDirectories::with_prefix(app_name())?;
-    Ok(xdg_dirs.get_config_file("config.toml"))
+pub fn init() -> std::io::Result<()> {
+    println!("Initializing configuration...");
+    create_config_file()?;
+    let mut config = Config::load()?;
+    crate::commands::init::initialize_project(&mut config)
 }
 
 fn create_config_file() -> std::io::Result<()> {
@@ -128,98 +200,6 @@ fn create_config_file() -> std::io::Result<()> {
     } else {
         Config::new().save()?;
         println!("Created empty configuration");
-        Ok(())
-    }
-}
-
-/// Creates a project in the configuration file with location set to current directory.
-fn initialize_project(conf: &mut Config) -> std::io::Result<()> {
-    let current_dir = std::env::current_dir()?;
-    let current_dir = std::fs::canonicalize(current_dir)?;
-    if conf
-        .projects
-        .iter()
-        .filter(|p| p.location == current_dir)
-        .count()
-        == 0
-    {
-        println!("No projects found for: {:?}.", current_dir);
-        conf.projects.push(Project {
-            location: current_dir.clone(),
-            fixmes: vec![],
-        });
-        conf.save()?;
-        println!(
-            "Updated configuration with new project for: {:?}",
-            current_dir
-        );
-        return Ok(());
-    } else {
-        println!("Project for this directory already exists.");
-    }
-    Ok(())
-}
-
-pub fn init() -> std::io::Result<()> {
-    println!("Initializing configuration...");
-    create_config_file()?;
-    let mut config = Config::load()?;
-    initialize_project(&mut config)
-}
-
-pub fn add(conf: &mut Config, message: &str) -> std::io::Result<Fixme> {
-    let dir = std::env::current_dir()?;
-    let dir = std::fs::canonicalize(dir)?;
-    let fixme = Fixme {
-        message: message.to_string(),
-        location: dir,
-        created: Utc::now(),
-    };
-    for project in &mut conf.projects {
-        for path in fixme.location.ancestors() {
-            if path == project.location {
-                project.fixmes.push(fixme.clone());
-                conf.save()?;
-                return Ok(fixme);
-            }
-        }
-    }
-    Err(std::io::Error::new(
-        std::io::ErrorKind::InvalidData,
-        "No project initialized for this directory. run 'fixme init' first",
-    ))
-}
-
-#[derive(Debug)]
-pub struct FixId {
-    pub project_id: u8,
-    pub fixme_id: u8,
-}
-
-pub fn fix(_conf: &mut Config, id: FixId) {
-    println!("Fixing id: {id:?}");
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn add_fixme_when_no_matching_project_is_err() {
-        let mut conf = Config::new();
-        assert!(add(&mut conf, "foobar").is_err());
-    }
-
-    #[test]
-    fn add_fixme_when_fixme_in_project_location_is_ok() -> std::io::Result<()> {
-        let mut conf = Config::new();
-        let dir = std::env::current_dir()?;
-        conf.projects.push(Project {
-            location: dir,
-            fixmes: vec![],
-        });
-        let result = add(&mut conf, "");
-        assert!(result.is_ok());
         Ok(())
     }
 }
