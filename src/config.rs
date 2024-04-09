@@ -75,6 +75,10 @@ impl Project {
         self.fixmes.push(fixme);
         self.fixmes.last().unwrap()
     }
+
+    pub fn fixmes(&self) -> &Vec<Fixme> {
+        &self.fixmes
+    }
 }
 
 impl Fixme {
