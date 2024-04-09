@@ -21,6 +21,13 @@ pub struct Fixme {
     pub message: String,
     pub location: PathBuf,
     pub created: DateTime<Utc>,
+    pub status: FixmeStatus,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum FixmeStatus {
+    Active,
+    Complete,
 }
 
 /// Given a parent path and some path, return the fragment of the path after it.
@@ -93,6 +100,7 @@ impl Fixme {
             message: message.to_string(),
             location,
             created: Utc::now(),
+            status: FixmeStatus::Active,
         }
     }
 }
