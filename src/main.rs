@@ -1,5 +1,5 @@
+use crate::commands::list::ListScope;
 use clap::{Args, Parser, Subcommand};
-use config::ListScope;
 
 use crate::config::Fixme;
 
@@ -47,7 +47,7 @@ struct Scope {
     all: bool,
 }
 
-impl From<Scope> for config::ListScope {
+impl From<Scope> for commands::list::ListScope {
     fn from(value: Scope) -> Self {
         let Scope { project, all } = value;
         match (project, all) {
@@ -90,7 +90,7 @@ fn main() -> std::io::Result<()> {
                     Err(err)
                 }
                 Ok(conf) => {
-                    for (project, fix) in conf.list_fixmes(ListScope::from(scope))? {
+                    for (project, fix) in commands::list::list(&conf, ListScope::from(scope))? {
                         println!(
                             "[{date}] {location}: (/{folder}) {message}",
                             date = fix.created.naive_local(),
