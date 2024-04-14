@@ -83,10 +83,6 @@ impl Project {
         self.fixmes.last().unwrap()
     }
 
-    pub fn fixmes(&self) -> &Vec<Fixme> {
-        &self.fixmes
-    }
-
     pub fn active_fixmes(&self) -> Vec<&Fixme> {
         let result = self
             .fixmes

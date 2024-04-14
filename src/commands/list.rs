@@ -15,11 +15,11 @@ pub fn list(conf: &Config, scope: ListScope) -> std::io::Result<Vec<(&Project, &
         if (scope == ListScope::All)
             || (scope == ListScope::Project && project.is_path_in_project(&cur_dir))
         {
-            for fixme in project.fixmes() {
+            for fixme in project.active_fixmes() {
                 fixmes.push((&project, fixme));
             }
         } else if scope == ListScope::Directory && project.is_path_in_project(&cur_dir) {
-            for fixme in project.fixmes() {
+            for fixme in project.active_fixmes() {
                 if fixme.location == cur_dir {
                     fixmes.push((&project, fixme));
                 }
