@@ -83,27 +83,19 @@ fn main() -> std::io::Result<()> {
             Ok(())
         }
         Command::List { filter: _, scope } => {
-            let c = config::Config::load();
-            match c {
-                Err(err) => {
-                    println!("{}", err);
-                    Err(err)
-                }
-                Ok(conf) => {
-                    for (project, fix) in commands::list::list(&conf, ListScope::from(scope))? {
-                        println!(
-                            "[{date}] {location}: (/{folder}) {message}",
-                            date = fix.created.naive_local(),
-                            location = project.name(),
-                            folder = config::remove_ancestors(project.location(), &fix.location)
-                                .to_str()
-                                .unwrap(),
-                            message = fix.message,
-                        );
-                    }
-                    Ok(())
-                }
+            let conf = config::Config::load()?;
+            for (project, fix) in commands::list::list(&conf, ListScope::from(scope))? {
+                println!(
+                    "[{date}] {location}: (/{folder}) {message}",
+                    date = fix.created.naive_local(),
+                    location = project.name(),
+                    folder = config::remove_ancestors(project.location(), &fix.location)
+                        .to_str()
+                        .unwrap(),
+                    message = fix.message,
+                );
             }
+            Ok(())
         }
         Command::Init => config::init(),
     }
