@@ -24,7 +24,7 @@ pub struct Fixme {
     pub status: FixmeStatus,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum FixmeStatus {
     Active,
     Complete,
@@ -86,6 +86,14 @@ impl Project {
     pub fn fixmes(&self) -> &Vec<Fixme> {
         &self.fixmes
     }
+
+    pub fn active_fixmes(&self) -> Vec<&Fixme> {
+        let result = self
+            .fixmes
+            .iter()
+            .filter(|fix| fix.status == FixmeStatus::Active);
+        result.collect()
+    }
 }
 
 impl Fixme {
@@ -102,6 +110,11 @@ impl Fixme {
             created: Utc::now(),
             status: FixmeStatus::Active,
         }
+    }
+
+    #[cfg(test)]
+    pub fn complete(&mut self) {
+        self.status = FixmeStatus::Complete;
     }
 }
 
@@ -181,6 +194,30 @@ fn create_config_file() -> std::io::Result<()> {
     } else {
         Config::new().save()?;
         println!("Created empty configuration");
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn active_fixmes_only_shows_active_ones() -> std::io::Result<()> {
+        let dir = std::env::current_dir()?;
+        let dir = std::fs::canonicalize(dir)?;
+        let mut project = Project::new(dir.clone());
+
+        let f1 = Fixme::new(dir.clone(), "active");
+        project.add_fixme(f1);
+
+        let mut f2 = Fixme::new(dir.clone(), "complete");
+        f2.complete();
+        project.add_fixme(f2);
+
+        let result = project.active_fixmes();
+        dbg!(&result);
+        assert!(result.len() == 1);
         Ok(())
     }
 }
