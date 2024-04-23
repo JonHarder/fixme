@@ -1,10 +1,36 @@
-use crate::config::{Config, Fixme, Project};
+use std::fmt;
+
+use crate::config::{self, Config, Fixme, Project};
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum ListScope {
     Directory,
     Project,
     All,
+}
+
+pub struct IndexedFixme<'a> {
+    project_id: usize,
+    project: &'a Project,
+    fixme_id: usize,
+    fixme: &'a Fixme,
+}
+
+impl fmt::Display for IndexedFixme<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "[{date}] id: {project_id}-{fixme_id}, name: {location}, dir: /{folder}, {message}",
+            date = self.fixme.created.naive_local(),
+            location = self.project.name(),
+            project_id = self.project_id,
+            fixme_id = self.fixme_id,
+            folder = config::remove_ancestors(self.project.location(), &self.fixme.location)
+                .to_str()
+                .unwrap(),
+            message = self.fixme.message,
+        )
+    }
 }
 
 pub fn list(conf: &Config, scope: ListScope) -> std::io::Result<Vec<(&Project, &Fixme)>> {
