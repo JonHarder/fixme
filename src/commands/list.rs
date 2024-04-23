@@ -1,6 +1,5 @@
-use std::fmt;
-
 use crate::config::{self, Config, Fixme, Project};
+use std::fmt;
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum ListScope {
@@ -33,26 +32,36 @@ impl fmt::Display for IndexedFixme<'_> {
     }
 }
 
-pub fn list(conf: &Config, scope: ListScope) -> std::io::Result<Vec<(&Project, &Fixme)>> {
+pub fn list(conf: &Config, scope: ListScope) -> std::io::Result<Vec<IndexedFixme>> {
     let cur_dir = std::env::current_dir()?;
     let cur_dir = std::fs::canonicalize(cur_dir)?;
-    let mut fixmes: Vec<(&Project, &Fixme)> = vec![];
-    for project in &conf.projects {
+    let mut fixmes: Vec<IndexedFixme> = vec![];
+    for (project_id, project) in conf.projects.iter().enumerate() {
         if (scope == ListScope::All)
             || (scope == ListScope::Project && project.is_path_in_project(&cur_dir))
         {
-            for fixme in project.active_fixmes() {
-                fixmes.push((&project, fixme));
+            for (fixme_id, fixme) in project.active_fixmes().iter().enumerate() {
+                fixmes.push(IndexedFixme {
+                    project_id,
+                    project,
+                    fixme_id,
+                    fixme,
+                })
             }
         } else if scope == ListScope::Directory && project.is_path_in_project(&cur_dir) {
-            for fixme in project.active_fixmes() {
+            for (fixme_id, fixme) in project.active_fixmes().iter().enumerate() {
                 if fixme.location == cur_dir {
-                    fixmes.push((&project, fixme));
+                    fixmes.push(IndexedFixme {
+                        project_id,
+                        project,
+                        fixme_id,
+                        fixme,
+                    })
                 }
             }
         }
     }
-    fixmes.sort_by_key(|f| f.1.created);
+    fixmes.sort_by_key(|f| f.fixme.created);
     fixmes.reverse();
     Ok(fixmes)
 }
