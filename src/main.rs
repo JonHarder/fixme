@@ -84,16 +84,8 @@ fn main() -> std::io::Result<()> {
         }
         Command::List { filter: _, scope } => {
             let conf = config::Config::load()?;
-            for (project, fix) in commands::list::list(&conf, ListScope::from(scope))? {
-                println!(
-                    "[{date}] {location}: (/{folder}) {message}",
-                    date = fix.created.naive_local(),
-                    location = project.name(),
-                    folder = config::remove_ancestors(project.location(), &fix.location)
-                        .to_str()
-                        .unwrap(),
-                    message = fix.message,
-                );
+            for indexed_fixme in commands::list::list(&conf, ListScope::from(scope))? {
+                println!("{}", indexed_fixme);
             }
             Ok(())
         }
