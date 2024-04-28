@@ -40,17 +40,19 @@ pub fn list(conf: &Config, scope: ListScope) -> std::io::Result<Vec<IndexedFixme
         if (scope == ListScope::All)
             || (scope == ListScope::Project && project.is_path_in_project(&cur_dir))
         {
-            for (fixme_id, fixme) in project.active_fixmes().iter().enumerate() {
-                fixmes.push(IndexedFixme {
-                    project_id,
-                    project,
-                    fixme_id,
-                    fixme,
-                })
+            for (fixme_id, fixme) in project.fixmes.iter().enumerate() {
+                if fixme.is_active() {
+                    fixmes.push(IndexedFixme {
+                        project_id,
+                        project,
+                        fixme_id,
+                        fixme,
+                    })
+                }
             }
         } else if scope == ListScope::Directory && project.is_path_in_project(&cur_dir) {
-            for (fixme_id, fixme) in project.active_fixmes().iter().enumerate() {
-                if fixme.location == cur_dir {
+            for (fixme_id, fixme) in project.fixmes.iter().enumerate() {
+                if fixme.location == cur_dir && fixme.is_active() {
                     fixmes.push(IndexedFixme {
                         project_id,
                         project,

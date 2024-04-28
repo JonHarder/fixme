@@ -13,7 +13,7 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Project {
     location: PathBuf,
-    fixmes: Vec<Fixme>,
+    pub fixmes: Vec<Fixme>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -108,9 +108,12 @@ impl Fixme {
         }
     }
 
-    #[cfg(test)]
     pub fn complete(&mut self) {
         self.status = FixmeStatus::Complete;
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.status == FixmeStatus::Active
     }
 }
 
