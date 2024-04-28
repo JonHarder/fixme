@@ -83,6 +83,10 @@ impl Project {
         self.fixmes.last().unwrap()
     }
 
+    pub fn get_fixme_mut(&mut self, i: usize) -> Option<&mut Fixme> {
+        self.fixmes.get_mut(i)
+    }
+
     pub fn active_fixmes(&self) -> Vec<&Fixme> {
         let result = self
             .fixmes
@@ -129,6 +133,18 @@ impl fmt::Display for Fixme {
     }
 }
 
+#[derive(Debug)]
+pub struct FixId {
+    pub project_id: usize,
+    pub fixme_id: usize,
+}
+
+#[derive(PartialEq, Eq)]
+pub enum IndexError {
+    ProjectIdOutOfBounds,
+    FixmeIdOutOfBounds,
+}
+
 impl Config {
     pub fn new() -> Self {
         Config { projects: vec![] }
@@ -148,6 +164,17 @@ impl Config {
         let contents = toml::to_string(&self).expect("Config object to serialize to toml");
         println!("Saving config...");
         std::fs::write(path, contents)
+    }
+
+    pub fn get_fixme(&self, id: FixId) -> Result<&Fixme, IndexError> {
+        self.projects
+            .get(id.project_id)
+            .ok_or(IndexError::ProjectIdOutOfBounds)
+            .and_then(|p| {
+                p.fixmes
+                    .get(id.fixme_id)
+                    .ok_or(IndexError::FixmeIdOutOfBounds)
+            })
     }
 }
 
@@ -218,5 +245,32 @@ mod test {
         dbg!(&result);
         assert!(result.len() == 1);
         Ok(())
+    }
+
+    #[test]
+    fn get_fixme_returns_fixme_whith_valid_index() {
+        let id = FixId {
+            project_id: 0,
+            fixme_id: 0,
+        };
+        let mut conf = Config::new();
+        let mut project = Project::new(PathBuf::new());
+        project.fixmes.push(Fixme::new(PathBuf::new(), ""));
+        conf.projects.push(project);
+
+        assert!(conf.get_fixme(id).is_ok());
+    }
+
+    #[test]
+    fn get_fixme_return_project_error_with_invalid_project_id() {
+        let id = FixId {
+            project_id: 0,
+            fixme_id: 0,
+        };
+        let conf = Config::new();
+
+        assert!(conf
+            .get_fixme(id)
+            .is_err_and(|e| e == IndexError::ProjectIdOutOfBounds));
     }
 }

@@ -73,12 +73,12 @@ fn main() -> std::io::Result<()> {
             project_id,
             fixme_id,
         } => {
-            let fix_id = commands::fix::FixId {
+            let fix_id = crate::config::FixId {
                 project_id,
                 fixme_id,
             };
             let mut c = config::Config::load()?;
-            commands::fix::fix(&mut c, fix_id);
+            commands::fix::fix(&mut c, fix_id)?;
             Ok(())
         }
         Command::Add { message } => {
