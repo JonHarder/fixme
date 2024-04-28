@@ -21,7 +21,7 @@ enum Command {
         message: String,
     },
     /// Fix (complete) a fixme.
-    Fix { project_id: u8, fixme_id: u8 },
+    Fix { project_id: usize, fixme_id: usize },
     /// Show the fixmes local to your directory, project or all recorded.
     List {
         /// Filter fixmes
