@@ -1,0 +1,124 @@
+* Fixme
+A simple command line tool for tracking things to fix.
+
+When you notice something that needs fixing, changing, or doing, add a
+'fixme' and its content, directory, project, and time of creation will
+be tracked automatically.
+
+These items are stored in a central configuration directory
+~XDG_CONFIG_HOME~ and so are not tracked in version control with your
+project.
+
+This tool was primarily designed and developed with software projects
+in mind, however it could assist in any workflow that deals with
+different "projects" and folders within them.
+
+** Commands
+#+begin_src shell :results output :exports both
+fixme --help
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Keep track of fixme tasks local to your code without adding them to version control.
+
+Usage: fixme <COMMAND>
+
+Commands:
+  add   Add a new fixme in the current working directory
+  fix   Fix (complete) a fixme
+  list  Show the fixmes local to your directory, project or all recorded
+  init  Initialize a fixme configuration file
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help     Print help
+  -V, --version  Print version
+#+end_example
+
+*** Add
+#+begin_src shell :results output :exports both
+fixme add --help
+#+end_src
+
+#+RESULTS:
+: Add a new fixme in the current working directory
+: 
+: Usage: fixme add <MESSAGE>
+: 
+: Arguments:
+:   <MESSAGE>  The message associated with this fixme
+: 
+: Options:
+:   -h, --help  Print help
+
+*** Fix
+#+begin_src shell :results output :exports both
+fixme add --help
+#+end_src
+
+#+RESULTS:
+: Add a new fixme in the current working directory
+: 
+: Usage: fixme add <MESSAGE>
+: 
+: Arguments:
+:   <MESSAGE>  The message associated with this fixme
+: 
+: Options:
+:   -h, --help  Print help
+
+*** List
+#+begin_src shell :results output :exports both
+fixme list --help
+#+end_src
+
+#+RESULTS:
+: Show the fixmes local to your directory, project or all recorded
+: 
+: Usage: fixme list [OPTIONS]
+: 
+: Options:
+:   -f, --filter <FILTER>  Filter fixmes
+:   -p, --project          Show fixmes from whole project
+:   -a, --all              Show all fixmes from all projects
+:   -h, --help             Print help
+
+*** Init
+#+begin_src shell :results output :exports both
+fixme init --help
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Initialize a fixme configuration file.
+
+This must be done to register a project before creating a fixme. If you try to create a fixme with ~fixme add~ outside of any known project, the command will fail and you will be prompted to run ~init~ first.
+
+Run this command at the root of your project.
+
+Usage: fixme init
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+#+end_example
+
+*** Fix
+#+begin_src shell :results output :exports both
+fixme fix --help
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Fix (complete) a fixme
+
+Usage: fixme fix <PROJECT_ID> <FIXME_ID>
+
+Arguments:
+  <PROJECT_ID>  
+  <FIXME_ID>    
+
+Options:
+  -h, --help  Print help
+#+end_example

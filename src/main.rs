@@ -32,6 +32,13 @@ enum Command {
         scope: Scope,
     },
     /// Initialize a fixme configuration file.
+    ///
+    /// This must be done to register a project before creating a fixme.
+    /// If you try to create a fixme with ~fixme add~ outside of any known
+    /// project, the command will fail and you will be prompted to run ~init~
+    /// first.
+    ///
+    /// Run this command at the root of your project.
     Init,
 }
 
