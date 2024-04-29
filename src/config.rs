@@ -83,16 +83,8 @@ impl Project {
         self.fixmes.last().unwrap()
     }
 
-    pub fn get_fixme_mut(&mut self, i: usize) -> Option<&mut Fixme> {
-        self.fixmes.get_mut(i)
-    }
-
-    pub fn active_fixmes(&self) -> Vec<&Fixme> {
-        let result = self
-            .fixmes
-            .iter()
-            .filter(|fix| fix.status == FixmeStatus::Active);
-        result.collect()
+    pub fn get_fixme(&self, i: usize) -> Option<&Fixme> {
+        self.fixmes.get(i)
     }
 }
 
@@ -133,16 +125,23 @@ impl fmt::Display for Fixme {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct FixId {
     pub project_id: usize,
     pub fixme_id: usize,
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum IndexError {
     ProjectIdOutOfBounds,
     FixmeIdOutOfBounds,
+}
+
+impl From<IndexError> for std::io::Error {
+    fn from(value: IndexError) -> Self {
+        let msg = format!("{:?}", value);
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, msg)
+    }
 }
 
 impl Config {
@@ -162,17 +161,16 @@ impl Config {
     pub fn save(&self) -> std::io::Result<()> {
         let path = get_config_path()?;
         let contents = toml::to_string(&self).expect("Config object to serialize to toml");
-        println!("Saving config...");
         std::fs::write(path, contents)
     }
 
-    pub fn get_fixme(&self, id: FixId) -> Result<&Fixme, IndexError> {
+    pub fn get_fixme_mut(&mut self, id: FixId) -> Result<&mut Fixme, IndexError> {
         self.projects
-            .get(id.project_id)
+            .get_mut(id.project_id)
             .ok_or(IndexError::ProjectIdOutOfBounds)
             .and_then(|p| {
                 p.fixmes
-                    .get(id.fixme_id)
+                    .get_mut(id.fixme_id)
                     .ok_or(IndexError::FixmeIdOutOfBounds)
             })
     }
@@ -229,25 +227,6 @@ mod test {
     use super::*;
 
     #[test]
-    fn active_fixmes_only_shows_active_ones() -> std::io::Result<()> {
-        let dir = std::env::current_dir()?;
-        let dir = std::fs::canonicalize(dir)?;
-        let mut project = Project::new(dir.clone());
-
-        let f1 = Fixme::new(dir.clone(), "active");
-        project.add_fixme(f1);
-
-        let mut f2 = Fixme::new(dir.clone(), "complete");
-        f2.complete();
-        project.add_fixme(f2);
-
-        let result = project.active_fixmes();
-        dbg!(&result);
-        assert!(result.len() == 1);
-        Ok(())
-    }
-
-    #[test]
     fn get_fixme_returns_fixme_whith_valid_index() {
         let id = FixId {
             project_id: 0,
@@ -258,7 +237,7 @@ mod test {
         project.fixmes.push(Fixme::new(PathBuf::new(), ""));
         conf.projects.push(project);
 
-        assert!(conf.get_fixme(id).is_ok());
+        assert!(conf.get_fixme_mut(id).is_ok());
     }
 
     #[test]
@@ -267,10 +246,10 @@ mod test {
             project_id: 0,
             fixme_id: 0,
         };
-        let conf = Config::new();
+        let mut conf = Config::new();
 
         assert!(conf
-            .get_fixme(id)
+            .get_fixme_mut(id)
             .is_err_and(|e| e == IndexError::ProjectIdOutOfBounds));
     }
 }
