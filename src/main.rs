@@ -78,7 +78,8 @@ fn main() -> std::io::Result<()> {
                 fixme_id,
             };
             let mut c = config::Config::load()?;
-            commands::fix::fix(&mut c, fix_id)?;
+            let fixme = commands::fix::fix(&mut c, fix_id)?;
+            println!("{}", fixme);
             Ok(())
         }
         Command::Add { message } => {
