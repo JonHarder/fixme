@@ -16,13 +16,16 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Command {
     /// Add a new fixme in the current working directory.
+    #[clap(alias = "a")]
     Add {
         /// The message associated with this fixme
         message: String,
     },
     /// Fix (complete) a fixme.
+    #[clap(alias = "f")]
     Fix { project_id: usize, fixme_id: usize },
     /// Show the fixmes local to your directory, project or all recorded.
+    #[clap(aliases = &["ls", "l"])]
     List {
         /// Filter fixmes
         #[arg(short, long)]
@@ -39,6 +42,7 @@ enum Command {
     /// first.
     ///
     /// Run this command at the root of your project.
+    #[clap(aliases = &["i", "new"])]
     Init,
 }
 
