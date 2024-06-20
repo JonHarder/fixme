@@ -36,7 +36,18 @@ pub fn list(conf: &Config, scope: ListScope) -> std::io::Result<Vec<IndexedFixme
     let cur_dir = std::env::current_dir()?;
     let cur_dir = std::fs::canonicalize(cur_dir)?;
     let mut fixmes: Vec<IndexedFixme> = vec![];
+    if !conf
+        .projects
+        .iter()
+        .any(|project| project.is_path_in_project(&cur_dir))
+    {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "Directory not in any project. Run init first",
+        ));
+    }
     for (project_id, project) in conf.projects.iter().enumerate() {
+        // TODO: refactor these to conditional branches.
         if (scope == ListScope::All)
             || (scope == ListScope::Project && project.is_path_in_project(&cur_dir))
         {
