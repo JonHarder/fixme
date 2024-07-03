@@ -4,14 +4,7 @@ use crate::config::{Config, Project};
 pub fn initialize_project(conf: &mut Config) -> std::io::Result<()> {
     let current_dir = std::env::current_dir()?;
     let current_dir = std::fs::canonicalize(current_dir)?;
-    if conf
-        .projects
-        .iter()
-        .filter(|p| p.location() == current_dir)
-        .count()
-        == 0
-    {
-        println!("No projects found for: {:?}.", current_dir);
+    if !conf.projects.iter().any(|p| p.location() == current_dir) {
         conf.projects.push(Project::new(current_dir.clone()));
         conf.save()?;
         println!(
