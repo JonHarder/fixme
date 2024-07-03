@@ -19,7 +19,7 @@ impl fmt::Display for IndexedFixme<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "[{date}] id: {project_id}-{fixme_id}, name: {location}, dir: /{folder}, {message}",
+            "[{date}] {project_id} {fixme_id}: ({location}) [/{folder}], {message}",
             date = self.fixme.created.naive_local(),
             location = self.project.name(),
             project_id = self.project_id,
